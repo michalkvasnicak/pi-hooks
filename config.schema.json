@@ -4,78 +4,84 @@
   "description": "Checks run by pi-hooks at supported Pi lifecycle events.",
   "type": "object",
   "properties": {
-    "agent_before_settle": {
+    "hooks": {
       "type": "object",
       "properties": {
-        "failFast": {
-          "type": "boolean",
-          "default": true,
-          "description": "Stop running checks at the first failure. Defaults to true."
-        },
-        "maxRetries": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 5,
-          "description": "Maximum automatic continuations after failed checks. Defaults to 5."
-        },
-        "checks": {
-          "type": "array",
-          "description": "Checks run before the agent settles. A failed check is sent back to the agent as a message.",
-          "items": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "Optional display name; defaults to its 1-based position."
+        "agent_before_settle": {
+          "type": "object",
+          "properties": {
+            "failFast": {
+              "type": "boolean",
+              "default": true,
+              "description": "Stop running checks at the first failure. Defaults to true."
+            },
+            "maxRetries": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 5,
+              "description": "Maximum automatic continuations after failed checks. Defaults to 5."
+            },
+            "checks": {
+              "type": "array",
+              "description": "Checks run before the agent settles. A failed check is sent back to the agent as a message.",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Optional display name; defaults to its 1-based position."
+                      },
+                      "inputs": {
+                        "type": "array",
+                        "items": { "type": "string", "minLength": 1 },
+                        "description": "Glob patterns for files that affect this check. When omitted, the check always runs."
+                      },
+                      "type": {
+                        "const": "command"
+                      },
+                      "command": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Shell command; a non-zero exit status is a failure."
+                      }
+                    },
+                    "required": ["type", "command"],
+                    "additionalProperties": false
                   },
-                  "inputs": {
-                    "type": "array",
-                    "items": { "type": "string", "minLength": 1 },
-                    "description": "Glob patterns for files that affect this check. When omitted, the check always runs."
-                  },
-                  "type": {
-                    "const": "command"
-                  },
-                  "command": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Shell command; a non-zero exit status is a failure."
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Optional display name; defaults to its 1-based position."
+                      },
+                      "inputs": {
+                        "type": "array",
+                        "items": { "type": "string", "minLength": 1 },
+                        "description": "Glob patterns for files that affect this check. When omitted, the check always runs."
+                      },
+                      "type": {
+                        "const": "script"
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Path, relative to the repository root, to a module with a default-exported async function."
+                      }
+                    },
+                    "required": ["type", "path"],
+                    "additionalProperties": false
                   }
-                },
-                "required": ["type", "command"],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "Optional display name; defaults to its 1-based position."
-                  },
-                  "inputs": {
-                    "type": "array",
-                    "items": { "type": "string", "minLength": 1 },
-                    "description": "Glob patterns for files that affect this check. When omitted, the check always runs."
-                  },
-                  "type": {
-                    "const": "script"
-                  },
-                  "path": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Path, relative to the repository root, to a module with a default-exported async function."
-                  }
-                },
-                "required": ["type", "path"],
-                "additionalProperties": false
+                ]
               }
-            ]
-          }
+            }
+          },
+          "required": ["checks"],
+          "additionalProperties": false
         }
       },
-      "required": ["checks"],
       "additionalProperties": false
     }
   },
