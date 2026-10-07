@@ -1,9 +1,9 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { resolve } from "node:path";
-import { createJiti } from "jiti";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { loadConfig, type Check } from "./config.js";
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { resolve } from 'node:path';
+import { createJiti } from 'jiti';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { loadConfig, type Check } from './config.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -13,7 +13,7 @@ type CheckContext = {
 };
 
 async function runCheck(check: Check, ctx: CheckContext): Promise<void> {
-  if (check.type === "command") {
+  if (check.type === 'command') {
     await execFileAsync(check.command, {
       cwd: ctx.cwd,
       shell: true,
@@ -25,11 +25,11 @@ async function runCheck(check: Check, ctx: CheckContext): Promise<void> {
   const scriptPath = resolve(ctx.cwd, check.path);
   const jiti = createJiti(import.meta.url, { moduleCache: false, fsCache: false });
   const loaded = await jiti.import<{ default?: (context: CheckContext) => unknown }>(scriptPath);
-  if (typeof loaded.default !== "function") {
+  if (typeof loaded.default !== 'function') {
     throw new Error(`Script ${check.path} must have a default-exported function`);
   }
   const result = await loaded.default(ctx);
-  if (typeof result === "string" && result.length > 0) throw new Error(result);
+  if (typeof result === 'string' && result.length > 0) throw new Error(result);
 }
 
 export default function (pi: ExtensionAPI): void {
@@ -38,11 +38,11 @@ export default function (pi: ExtensionAPI): void {
   let maxRetries = 5;
   let retriesUsed = 0;
 
-  pi.on("agent_start", () => {
+  pi.on('agent_start', () => {
     retriesUsed = 0;
   });
 
-  pi.on("session_start", (_event, ctx) => {
+  pi.on('session_start', (_event, ctx) => {
     try {
       const config = loadConfig(ctx.cwd)?.agent_before_settle;
       checks = config?.checks ?? [];
@@ -52,24 +52,24 @@ export default function (pi: ExtensionAPI): void {
       checks = [];
       failFast = true;
       maxRetries = 5;
-      ctx.ui.notify(`pi-hooks: ${(error as Error).message}`, "error");
+      ctx.ui.notify(`pi-hooks: ${(error as Error).message}`, 'error');
     }
   });
 
-  pi.on("agent_before_settle", async (event, ctx) => {
+  pi.on('agent_before_settle', async (event, ctx) => {
     const failures: string[] = [];
     for (const [index, check] of checks.entries()) {
       const name = check.name?.trim() || String(index + 1);
-      ctx.ui.setStatus("pi-hooks", `Running: ${name}`);
+      ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
       try {
         await runCheck(check, { cwd: ctx.cwd, event: { outcome: event.outcome } });
       } catch (error) {
         const detail = error as Error & { stdout?: string; stderr?: string };
-        const output = [detail.message, detail.stdout, detail.stderr].filter(Boolean).join("\n");
+        const output = [detail.message, detail.stdout, detail.stderr].filter(Boolean).join('\n');
         failures.push(`${name}: ${output}`);
         if (failFast) break;
       } finally {
-        ctx.ui.setStatus("pi-hooks", undefined);
+        ctx.ui.setStatus('pi-hooks', undefined);
       }
     }
 
@@ -78,8 +78,8 @@ export default function (pi: ExtensionAPI): void {
     if (shouldContinue) retriesUsed++;
     return {
       entries: failures.map((failure) => ({
-        type: "custom_message" as const,
-        customType: "pi-hooks-check-failure",
+        type: 'custom_message' as const,
+        customType: 'pi-hooks-check-failure',
         content: failure,
         display: true,
       })),
