@@ -4,6 +4,11 @@
     "maxRetries": 5,
     "checks": [
       {
+        "name": "Lint",
+        "type": "command",
+        "command": "pnpm lint"
+      },
+      {
         "name": "TypeScript check",
         "type": "command",
         "command": "pnpm check"

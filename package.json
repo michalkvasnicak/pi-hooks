@@ -5,14 +5,20 @@
   "description": "A Pi extension",
   "type": "module",
   "packageManager": "pnpm@10.33.2",
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package"
+  ],
   "scripts": {
     "build": "tsc --noEmit",
     "check": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt",
     "test": "pnpm check"
   },
   "pi": {
-    "extensions": ["./src/index.ts"]
+    "extensions": [
+      "./src/index.ts"
+    ]
   },
   "dependencies": {
     "jiti": "^2.7.0",
@@ -24,6 +30,8 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.0.4",
     "@types/node": "^22.0.0",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
     "typescript": "^5.8.0"
   }
 }
