@@ -30,6 +30,11 @@
                     "type": "string",
                     "description": "Optional display name; defaults to its 1-based position."
                   },
+                  "inputs": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "description": "Glob patterns for files that affect this check. When omitted, the check always runs."
+                  },
                   "type": {
                     "const": "command"
                   },
@@ -48,6 +53,11 @@
                   "name": {
                     "type": "string",
                     "description": "Optional display name; defaults to its 1-based position."
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "description": "Glob patterns for files that affect this check. When omitted, the check always runs."
                   },
                   "type": {
                     "const": "script"

@@ -6,12 +6,24 @@
       {
         "name": "Lint",
         "type": "command",
-        "command": "pnpm lint"
+        "command": "pnpm lint",
+        "inputs": [
+          "src/**/*.ts",
+          ".oxlintrc.json",
+          "package.json",
+          "pnpm-lock.yaml"
+        ]
       },
       {
         "name": "TypeScript check",
         "type": "command",
-        "command": "pnpm check"
+        "command": "pnpm check",
+        "inputs": [
+          "src/**/*.ts",
+          "tsconfig.json",
+          "package.json",
+          "pnpm-lock.yaml"
+        ]
       }
     ]
   }

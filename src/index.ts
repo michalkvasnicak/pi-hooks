@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { createJiti } from 'jiti';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig, type Check } from './config.js';
+import { snapshotInputs } from './inputs.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,7 +63,10 @@ export default function (pi: ExtensionAPI): void {
       const name = check.name?.trim() || String(index + 1);
       ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
       try {
+        const snapshot = await snapshotInputs(check, ctx.cwd);
+        if (!snapshot.changed) continue;
         await runCheck(check, { cwd: ctx.cwd, event: { outcome: event.outcome } });
+        snapshot.commit();
       } catch (error) {
         const detail = error as Error & { stdout?: string; stderr?: string };
         const output = [detail.message, detail.stdout, detail.stderr].filter(Boolean).join('\n');

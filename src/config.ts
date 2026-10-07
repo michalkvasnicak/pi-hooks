@@ -5,6 +5,7 @@ import { z } from 'zod';
 const commandCheckSchema = z
   .object({
     name: z.string().optional(),
+    inputs: z.array(z.string().min(1)).optional(),
     type: z.literal('command'),
     command: z.string().min(1),
   })
@@ -13,6 +14,7 @@ const commandCheckSchema = z
 const scriptCheckSchema = z
   .object({
     name: z.string().optional(),
+    inputs: z.array(z.string().min(1)).optional(),
     type: z.literal('script'),
     path: z.string().min(1),
   })

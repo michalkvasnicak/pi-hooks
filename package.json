@@ -17,11 +17,13 @@
   },
   "dependencies": {
     "jiti": "^2.7.0",
+    "picomatch": "^4.0.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.0.4",
     "@types/node": "^22.0.0",
+    "@types/picomatch": "^4.0.3",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
     "typescript": "^5.8.0"
