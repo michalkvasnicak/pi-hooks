@@ -11,7 +11,8 @@
     "build": "tsc --noEmit",
     "check": "tsc --noEmit",
     "lint": "oxlint",
-    "format": "oxfmt",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "test": "pnpm check"
   },
   "dependencies": {
