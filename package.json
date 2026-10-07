@@ -1,0 +1,25 @@
+{
+  "name": "pi-hooks",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Pi extension",
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "keywords": ["pi-package"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check": "tsc --noEmit",
+    "test": "pnpm check"
+  },
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.0.4",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0"
+  }
+}
