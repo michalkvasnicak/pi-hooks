@@ -1,6 +1,10 @@
-# pi-hooks
+# @michalkvasnicak/pi-hooks
 
-A TypeScript [Pi extension](https://github.com/earendil-works/pi) scaffold.
+Configurable hooks for [Pi](https://github.com/earendil-works/pi): block or nudge tool calls and run repository checks before the agent finishes.
+
+- Block tool calls or add guidance to their results using glob-based rules.
+- Run commands or TypeScript scripts before the agent finishes, with automatic retries on failure.
+- Skip checks when their configured input files haven't changed.
 
 ## Development
 
@@ -38,8 +42,22 @@ The extension reads `.pi/pi-hooks.json` first, then `.pi-hooks.json` from the cu
 }
 ```
 
-Commands run in the repository root; a non-zero exit status fails the check. A script path is repository-relative and must default-export an async function receiving `{ cwd, event }`. Throw an error or return a non-empty string to fail the check; the failure is sent to the agent. `maxRetries` (default `5`) limits automatic continuations after failed checks; once exhausted, the failure is reported without continuing. `failFast` defaults to `true`; set it to `false` to run every check. Scripts are loaded without module caching so edits are picked up on subsequent checks.
+### Tool-call rules
 
-Tool-call rules are evaluated in order against the tool name and optional top-level string arguments using glob patterns; all specified argument patterns must match. The first matching block rule prevents execution and returns its `reason`. Nudge rules let the tool run, then append a `[pi-hooks nudge]` text item to its model-facing result while preserving existing content and structured data. Block and nudge are mutually exclusive actions; a blocked call never receives a nudge. Keep argument matching to fields whose values are strings.
+Rules match tool names and string arguments using glob patterns. All patterns in a rule must match.
 
-Checks may declare `inputs` as repository-relative glob patterns. A check is skipped when its matched files have not changed since the last successful run; checks without `inputs` always run. Input snapshots and file hashes are cached in memory for the lifetime of the extension process; after a restart, checks run again. Deleted files also change the snapshot. File hashes are reused when size and modification time match; tracked files reported changed by Git are re-hashed.
+- `block` prevents the call and tells the agent why.
+- `nudge` lets the call run and adds guidance to its result.
+
+Rules run in order. The first matching block stops the call; blocked calls receive no nudges.
+
+### Checks before finishing
+
+- **Commands** run in the repository root. A non-zero exit code fails the check.
+- **Scripts** use repository-relative paths and default-export an async function receiving `{ cwd, event }`. Throw an error or return a non-empty string to fail. Script edits are picked up on the next run.
+
+Failures go back to the agent so it can fix them. `maxRetries` limits retries (default: `5`). `failFast` stops at the first failure (default: `true`); set it to `false` to run all checks.
+
+### Skip unchanged checks
+
+Add `inputs` with repository-relative glob patterns to run a check only when matching files change or are deleted. Checks without `inputs` always run. The cache lasts until the extension restarts.
