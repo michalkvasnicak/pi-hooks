@@ -13,6 +13,7 @@
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "prepare": "husky",
     "test": "pnpm check"
   },
   "dependencies": {
@@ -24,12 +25,17 @@
     "@earendil-works/pi-coding-agent": "^1.0.4",
     "@types/node": "^22.0.0",
     "@types/picomatch": "^4.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
     "typescript": "^5.8.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc}": "oxfmt --write"
   },
   "packageManager": "pnpm@10.33.2",
   "pi": {
