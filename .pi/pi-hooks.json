@@ -1,0 +1,13 @@
+{
+  "agent_before_settle": {
+    "failFast": true,
+    "maxRetries": 5,
+    "checks": [
+      {
+        "name": "TypeScript check",
+        "type": "command",
+        "command": "pnpm check"
+      }
+    ]
+  }
+}
