@@ -2,8 +2,9 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
 import { createJiti } from 'jiti';
+import picomatch from 'picomatch';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { loadConfig, type Check } from './config.js';
+import { loadConfig, type Check, type ToolRule } from './config.js';
 import { snapshotInputs } from './inputs.js';
 
 const execFileAsync = promisify(execFile);
@@ -33,11 +34,20 @@ async function runCheck(check: Check, ctx: CheckContext): Promise<void> {
   if (typeof result === 'string' && result.length > 0) throw new Error(result);
 }
 
+function matches(rule: ToolRule, toolName: string, input: Record<string, unknown>): boolean {
+  if (!picomatch.isMatch(toolName, rule.match.tool)) return false;
+  return Object.entries(rule.match.arguments ?? {}).every(
+    ([key, pattern]) =>
+      typeof input[key] === 'string' && picomatch.isMatch(input[key] as string, pattern),
+  );
+}
+
 export default function (pi: ExtensionAPI): void {
   let checks: Check[] = [];
   let failFast = true;
   let maxRetries = 5;
   let retriesUsed = 0;
+  let toolRules: ToolRule[] = [];
 
   pi.on('agent_start', () => {
     retriesUsed = 0;
@@ -45,16 +55,42 @@ export default function (pi: ExtensionAPI): void {
 
   pi.on('session_start', (_event, ctx) => {
     try {
-      const config = loadConfig(ctx.cwd)?.agent_before_settle;
+      const loadedConfig = loadConfig(ctx.cwd);
+      const config = loadedConfig?.agent_before_settle;
       checks = config?.checks ?? [];
       failFast = config?.failFast ?? true;
       maxRetries = config?.maxRetries ?? 5;
+      toolRules = loadedConfig?.tool_call?.rules ?? [];
     } catch (error) {
       checks = [];
       failFast = true;
       maxRetries = 5;
+      toolRules = [];
       ctx.ui.notify(`pi-hooks: ${(error as Error).message}`, 'error');
     }
+  });
+
+  pi.on('tool_call', (event) => {
+    const rule = toolRules.find(
+      (candidate) =>
+        candidate.action === 'block' && matches(candidate, event.toolName, event.input),
+    );
+    if (rule?.action === 'block') return { block: true, reason: rule.reason };
+  });
+
+  pi.on('tool_result', (event) => {
+    const rule = toolRules.find(
+      (candidate) =>
+        candidate.action === 'nudge' && matches(candidate, event.toolName, event.input),
+    );
+    if (rule?.action !== 'nudge') return;
+    return {
+      content: [
+        ...event.content,
+        { type: 'text' as const, text: `\n\n[pi-hooks nudge] ${rule.text}` },
+      ],
+      structuredContent: event.structuredContent,
+    };
   });
 
   pi.on('agent_before_settle', async (event, ctx) => {

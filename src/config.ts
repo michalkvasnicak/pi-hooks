@@ -20,6 +20,33 @@ const scriptCheckSchema = z
   })
   .strict();
 
+const toolRuleSchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      match: z
+        .object({
+          tool: z.string().min(1),
+          arguments: z.record(z.string(), z.string()).optional(),
+        })
+        .strict(),
+      action: z.literal('block'),
+      reason: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      match: z
+        .object({
+          tool: z.string().min(1),
+          arguments: z.record(z.string(), z.string()).optional(),
+        })
+        .strict(),
+      action: z.literal('nudge'),
+      text: z.string().min(1),
+    })
+    .strict(),
+]);
+
 const agentBeforeSettleSchema = z
   .object({
     failFast: z.boolean().default(true),
@@ -28,14 +55,18 @@ const agentBeforeSettleSchema = z
   })
   .strict();
 
+const toolCallSchema = z.object({ rules: z.array(toolRuleSchema) }).strict();
+
 export const piHooksConfigSchema = z
   .object({
     agent_before_settle: agentBeforeSettleSchema.optional(),
+    tool_call: toolCallSchema.optional(),
   })
   .strict();
 
 export type PiHooksConfig = z.infer<typeof piHooksConfigSchema>;
 export type Check = NonNullable<PiHooksConfig['agent_before_settle']>['checks'][number];
+export type ToolRule = NonNullable<PiHooksConfig['tool_call']>['rules'][number];
 
 export function loadConfig(cwd: string): PiHooksConfig | undefined {
   const paths = [resolve(cwd, '.pi/pi-hooks.json'), resolve(cwd, '.pi-hooks.json')];
