@@ -50,7 +50,7 @@ const toolRuleSchema = z.discriminatedUnion('action', [
 const agentBeforeSettleSchema = z
   .object({
     failFast: z.boolean().default(true),
-    maxRetries: z.number().int().nonnegative().default(5),
+    maxRetries: z.number().int().nonnegative().default(3),
     checks: z.array(z.discriminatedUnion('type', [commandCheckSchema, scriptCheckSchema])),
   })
   .strict();

@@ -53,8 +53,8 @@
             "maxRetries": {
               "type": "integer",
               "minimum": 0,
-              "default": 5,
-              "description": "Maximum automatic continuations after failed checks. Defaults to 5."
+              "default": 3,
+              "description": "Maximum automatic continuations after failed checks. Defaults to 3."
             },
             "checks": {
               "type": "array",

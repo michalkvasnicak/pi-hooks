@@ -1,7 +1,6 @@
 {
   "agent_before_settle": {
     "failFast": true,
-    "maxRetries": 5,
     "checks": [
       {
         "name": "Lint",

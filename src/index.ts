@@ -18,7 +18,7 @@ export default function (pi: ExtensionAPI): void {
   const failureMessages = new CheckFailureService();
   let checks: Check[] = [];
   let failFast = true;
-  let maxRetries = 5;
+  let maxRetries = 3;
   let retriesUsed = 0;
   let toolRules: ToolRule[] = [];
 
@@ -29,13 +29,13 @@ export default function (pi: ExtensionAPI): void {
       const config = loadedConfig?.agent_before_settle;
       checks = config?.checks ?? [];
       failFast = config?.failFast ?? true;
-      maxRetries = config?.maxRetries ?? 5;
+      maxRetries = config?.maxRetries ?? 3;
       toolRules = loadedConfig?.tool_call?.rules ?? [];
       await repositories.getOrCreate(ctx.cwd).snapshot(checks);
     } catch (error) {
       checks = [];
       failFast = true;
-      maxRetries = 5;
+      maxRetries = 3;
       toolRules = [];
       ctx.ui.notify(`pi-hooks: ${(error as Error).message}`, 'error');
     }

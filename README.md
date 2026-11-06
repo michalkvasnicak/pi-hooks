@@ -31,7 +31,7 @@ The extension reads `.pi/pi-hooks.json` first, then `.pi-hooks.json` from the cu
   },
   "agent_before_settle": {
     "failFast": true,
-    "maxRetries": 5,
+    "maxRetries": 3,
     "checks": [
       { "name": "Lint", "type": "command", "command": "pnpm lint" },
       { "type": "script", "path": ".pi-hooks/check.ts" }
@@ -56,7 +56,7 @@ Rules run in order. The first matching block stops the call; blocked calls recei
 
 Failures go back to the agent so it can fix them. Each failure message is limited to 100 lines or 5 KiB, including its heading and truncation notice. Oversized output shows the tail and an absolute path to the full log in the system temporary directory. Command stdout and stderr are written directly to disk without an in-memory output limit; logs for successful commands are deleted, while failed-command logs remain available for inspection.
 
-`maxRetries` limits retries (default: `5`). `failFast` stops at the first failure (default: `true`); set it to `false` to run all checks.
+`maxRetries` limits retries (default: `3`). `failFast` stops at the first failure (default: `true`); set it to `false` to run all checks.
 
 ### Skip unchanged checks
 
