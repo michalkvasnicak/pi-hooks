@@ -16,6 +16,11 @@ const repoCaches = new Map<string, RepoCache>();
 
 export type InputSnapshot = { changed: boolean; commit: () => void };
 
+/** Start each session with a fresh baseline, including any pre-existing edits. */
+export function resetInputSnapshots(cwd: string): void {
+  repoCaches.delete(resolve(cwd));
+}
+
 function getRepoCache(cwd: string): RepoCache {
   const key = resolve(cwd);
   let cache = repoCaches.get(key);
@@ -41,27 +46,24 @@ function hashFile(path: string): string {
 
 /** Builds the current input snapshot; commit it only after the check succeeds. */
 export async function snapshotInputs(check: Check, cwd: string): Promise<InputSnapshot> {
-  if (!check.inputs?.length) return { changed: true, commit: () => {} };
-
   try {
     const cache = getRepoCache(cwd);
     const listed = await git(cwd, ['ls-files', '--cached', '--others', '--exclude-standard', '-z']);
-    const paths = listed
-      .split('\0')
-      .filter(Boolean)
-      .filter((path) => check.inputs!.some((pattern) => picomatch(pattern)(path)));
+    const paths = [...new Set(listed.split('\0').filter(Boolean))]
+      .filter((path) => !check.inputs?.length || check.inputs.some((pattern) => picomatch(pattern)(path)))
+      .sort();
     const untracked = new Set(
       (await git(cwd, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter(Boolean),
     );
     const modified = new Set(
-      (await git(cwd, ['diff', '--name-only', 'HEAD', '--'])).split('\n').filter(Boolean),
+      (await git(cwd, ['ls-files', '--modified', '-z'])).split('\0').filter(Boolean),
     );
     const files: Record<string, string> = {};
 
     for (const path of paths) {
       const absolutePath = join(cwd, path);
-      const stat = statSync(absolutePath);
-      if (!stat.isFile()) continue;
+      const stat = statSync(absolutePath, { throwIfNoEntry: false });
+      if (!stat?.isFile()) continue;
       const previousFile = cache.fileRecords.get(path);
       const needsHash = untracked.has(path) || modified.has(path) || !previousFile ||
         previousFile.mtimeMs !== stat.mtimeMs || previousFile.size !== stat.size;

@@ -60,4 +60,6 @@ Failures go back to the agent so it can fix them. `maxRetries` limits retries (d
 
 ### Skip unchanged checks
 
-Add `inputs` with repository-relative glob patterns to run a check only when matching files change or are deleted. Checks without `inputs` always run. The cache lasts until the extension restarts.
+Each session starts by snapshotting the current repository files, including any pre-existing edits. Checks run only when files are added, changed, or deleted relative to that baseline or the last successful check. Successful checks update their snapshot; failed checks do not.
+
+Add `inputs` with repository-relative glob patterns to limit a check to matching files. Checks without `inputs` watch all tracked and non-ignored untracked files. Snapshots reset at every session start. If Git or snapshotting is unavailable, checks run rather than being skipped.

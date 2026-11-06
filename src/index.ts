@@ -5,7 +5,7 @@ import { createJiti } from 'jiti';
 import picomatch from 'picomatch';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig, type Check, type ToolRule } from './config.js';
-import { snapshotInputs } from './inputs.js';
+import { resetInputSnapshots, snapshotInputs } from './inputs.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -53,7 +53,8 @@ export default function (pi: ExtensionAPI): void {
     retriesUsed = 0;
   });
 
-  pi.on('session_start', (_event, ctx) => {
+  pi.on('session_start', async (_event, ctx) => {
+    resetInputSnapshots(ctx.cwd);
     try {
       const loadedConfig = loadConfig(ctx.cwd);
       const config = loadedConfig?.agent_before_settle;
@@ -61,6 +62,10 @@ export default function (pi: ExtensionAPI): void {
       failFast = config?.failFast ?? true;
       maxRetries = config?.maxRetries ?? 5;
       toolRules = loadedConfig?.tool_call?.rules ?? [];
+      for (const check of checks) {
+        const snapshot = await snapshotInputs(check, ctx.cwd);
+        snapshot.commit();
+      }
     } catch (error) {
       checks = [];
       failFast = true;
