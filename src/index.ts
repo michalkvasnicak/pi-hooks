@@ -2,7 +2,6 @@ import picomatch from 'picomatch';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig, type Check, type ToolRule } from './config.js';
 import { RepositoryRegistryService } from './services/repository-registry.js';
-
 import { CheckRunnerService } from './services/check-runner.js';
 import { CheckFailureService } from './services/check-failure.js';
 
@@ -15,8 +14,7 @@ function matches(rule: ToolRule, toolName: string, input: Record<string, unknown
 }
 
 export default function (pi: ExtensionAPI): void {
-  const repositories = new RepositoryRegistryService();
-  const runner = new CheckRunnerService();
+  const repositories = new RepositoryRegistryService(new CheckRunnerService());
   const failureMessages = new CheckFailureService();
   let checks: Check[] = [];
   let failFast = true;
@@ -69,15 +67,25 @@ export default function (pi: ExtensionAPI): void {
   pi.on('agent_before_settle', async (event, ctx) => {
     if (checks.length === 0) return;
     const repository = repositories.getOrCreate(ctx.cwd);
-    const results = await repository.check(checks, async (check, index) => {
-      const name = check.name?.trim() || String(index + 1);
-      ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
-      try {
-        await runner.run(check, { cwd: repository.path, event: { outcome: event.outcome } });
-      } finally {
-        ctx.ui.setStatus('pi-hooks', undefined);
-      }
-    }, failFast);
+    const results = await repository.check(checks, {
+      event: { outcome: event.outcome },
+      failFast,
+      onProgress: (progress) => {
+        switch (progress.type) {
+          case 'started': {
+            const name = progress.check.name?.trim() || String(progress.index + 1);
+            ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
+            break;
+          }
+          case 'succeeded':
+          case 'failed':
+            ctx.ui.setStatus('pi-hooks', undefined);
+            break;
+          case 'skipped':
+            break;
+        }
+      },
+    });
     const failures = await Promise.all(results.map(({ check, index, error }) => {
       const name = check.name?.trim() || String(index + 1);
       return failureMessages.format(name, error);
