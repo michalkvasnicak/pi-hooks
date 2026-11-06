@@ -1,6 +1,6 @@
 {
   "name": "@michalkvasnicak/pi-hooks",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Configurable hooks for Pi: block or nudge tool calls and run repository checks before the agent finishes.",
   "license": "MIT",
   "keywords": [

@@ -20,10 +20,12 @@ export default function (pi: ExtensionAPI): void {
   let failFast = true;
   let maxRetries = 3;
   let retriesUsed = 0;
+  let hasMutated = false;
   let toolRules: ToolRule[] = [];
 
   pi.on('session_start', async (_event, ctx) => {
     retriesUsed = 0;
+    hasMutated = false;
     try {
       const loadedConfig = loadConfig(ctx.cwd);
       const config = loadedConfig?.agent_before_settle;
@@ -50,6 +52,9 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.on('tool_result', (event) => {
+    if (!event.isError && (event.toolName === 'edit' || event.toolName === 'write')) {
+      hasMutated = true;
+    }
     const rule = toolRules.find(
       (candidate) =>
         candidate.action === 'nudge' && matches(candidate, event.toolName, event.input),
@@ -65,7 +70,7 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.on('agent_before_settle', async (event, ctx) => {
-    if (checks.length === 0) return;
+    if (!hasMutated || checks.length === 0) return;
     const repository = repositories.getOrCreate(ctx.cwd);
     const results = await repository.check(checks, {
       event: { outcome: event.outcome },
