@@ -5,7 +5,7 @@ import { createJiti } from 'jiti';
 import picomatch from 'picomatch';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig, type Check, type ToolRule } from './config.js';
-import { resetInputSnapshots, snapshotInputs, snapshotRepository } from './inputs.js';
+import { RepositoryRegistryService } from './services/repository-registry.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -43,6 +43,7 @@ function matches(rule: ToolRule, toolName: string, input: Record<string, unknown
 }
 
 export default function (pi: ExtensionAPI): void {
+  const repositories = new RepositoryRegistryService();
   let checks: Check[] = [];
   let failFast = true;
   let maxRetries = 5;
@@ -54,7 +55,6 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.on('session_start', async (_event, ctx) => {
-    resetInputSnapshots(ctx.cwd);
     try {
       const loadedConfig = loadConfig(ctx.cwd);
       const config = loadedConfig?.agent_before_settle;
@@ -62,11 +62,7 @@ export default function (pi: ExtensionAPI): void {
       failFast = config?.failFast ?? true;
       maxRetries = config?.maxRetries ?? 5;
       toolRules = loadedConfig?.tool_call?.rules ?? [];
-      const repository = checks.length ? await snapshotRepository(ctx.cwd) : null;
-      for (const check of checks) {
-        const snapshot = snapshotInputs(check, ctx.cwd, repository);
-        snapshot.commit();
-      }
+      await repositories.getOrCreate(ctx.cwd).snapshot(checks);
     } catch (error) {
       checks = [];
       failFast = true;
@@ -101,25 +97,22 @@ export default function (pi: ExtensionAPI): void {
 
   pi.on('agent_before_settle', async (event, ctx) => {
     if (checks.length === 0) return;
-    const repository = await snapshotRepository(ctx.cwd);
-    const failures: string[] = [];
-    for (const [index, check] of checks.entries()) {
+    const repository = repositories.getOrCreate(ctx.cwd);
+    const results = await repository.check(checks, async (check, index) => {
       const name = check.name?.trim() || String(index + 1);
       ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
       try {
-        const snapshot = snapshotInputs(check, ctx.cwd, repository);
-        if (!snapshot.changed) continue;
-        await runCheck(check, { cwd: ctx.cwd, event: { outcome: event.outcome } });
-        snapshot.commit();
-      } catch (error) {
-        const detail = error as Error & { stdout?: string; stderr?: string };
-        const output = [detail.message, detail.stdout, detail.stderr].filter(Boolean).join('\n');
-        failures.push(`${name}: ${output}`);
-        if (failFast) break;
+        await runCheck(check, { cwd: repository.path, event: { outcome: event.outcome } });
       } finally {
         ctx.ui.setStatus('pi-hooks', undefined);
       }
-    }
+    }, failFast);
+    const failures = results.map(({ check, index, error }) => {
+      const name = check.name?.trim() || String(index + 1);
+      const detail = error as Error & { stdout?: string; stderr?: string };
+      const output = [detail.message, detail.stdout, detail.stderr].filter(Boolean).join('\n');
+      return `${name}: ${output}`;
+    });
 
     if (failures.length === 0) return;
     const shouldContinue = retriesUsed < maxRetries;
