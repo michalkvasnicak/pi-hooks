@@ -50,11 +50,8 @@ export default function (pi: ExtensionAPI): void {
   let retriesUsed = 0;
   let toolRules: ToolRule[] = [];
 
-  pi.on('agent_start', () => {
-    retriesUsed = 0;
-  });
-
   pi.on('session_start', async (_event, ctx) => {
+    retriesUsed = 0;
     try {
       const loadedConfig = loadConfig(ctx.cwd);
       const config = loadedConfig?.agent_before_settle;
@@ -114,7 +111,10 @@ export default function (pi: ExtensionAPI): void {
       return `${name}: ${output}`;
     });
 
-    if (failures.length === 0) return;
+    if (failures.length === 0) {
+      retriesUsed = 0;
+      return;
+    }
     const shouldContinue = retriesUsed < maxRetries;
     if (shouldContinue) retriesUsed++;
     return {
