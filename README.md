@@ -60,6 +60,6 @@ Failures go back to the agent so it can fix them. `maxRetries` limits retries (d
 
 ### Skip unchanged checks
 
-Each session starts by snapshotting the current repository files, including any pre-existing edits. Checks run only when files are added, changed, or deleted relative to that baseline or the last successful check. Successful checks update their snapshot; failed checks do not.
+Each session starts by snapshotting the current repository files, including any pre-existing edits. Checks run only when files are added, changed, or deleted relative to that baseline or the last successful check. Repository state is captured once at session start and once before the agent finishes, shared by all checks. Each check filters that snapshot using its input globs. Successful checks update their baseline; failed checks do not.
 
 Add `inputs` with repository-relative glob patterns to limit a check to matching files. Checks without `inputs` watch all tracked and non-ignored untracked files. Snapshots reset at every session start. If Git or snapshotting is unavailable, checks run rather than being skipped.

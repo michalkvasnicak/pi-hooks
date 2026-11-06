@@ -5,7 +5,7 @@ import { createJiti } from 'jiti';
 import picomatch from 'picomatch';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig, type Check, type ToolRule } from './config.js';
-import { resetInputSnapshots, snapshotInputs } from './inputs.js';
+import { resetInputSnapshots, snapshotInputs, snapshotRepository } from './inputs.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,8 +62,9 @@ export default function (pi: ExtensionAPI): void {
       failFast = config?.failFast ?? true;
       maxRetries = config?.maxRetries ?? 5;
       toolRules = loadedConfig?.tool_call?.rules ?? [];
+      const repository = checks.length ? await snapshotRepository(ctx.cwd) : null;
       for (const check of checks) {
-        const snapshot = await snapshotInputs(check, ctx.cwd);
+        const snapshot = snapshotInputs(check, ctx.cwd, repository);
         snapshot.commit();
       }
     } catch (error) {
@@ -99,12 +100,14 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.on('agent_before_settle', async (event, ctx) => {
+    if (checks.length === 0) return;
+    const repository = await snapshotRepository(ctx.cwd);
     const failures: string[] = [];
     for (const [index, check] of checks.entries()) {
       const name = check.name?.trim() || String(index + 1);
       ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
       try {
-        const snapshot = await snapshotInputs(check, ctx.cwd);
+        const snapshot = snapshotInputs(check, ctx.cwd, repository);
         if (!snapshot.changed) continue;
         await runCheck(check, { cwd: ctx.cwd, event: { outcome: event.outcome } });
         snapshot.commit();

@@ -14,6 +14,7 @@ type RepoCache = { fileRecords: Map<string, FileRecord>; checks: Map<string, Che
 
 const repoCaches = new Map<string, RepoCache>();
 
+export type RepositorySnapshot = Readonly<Record<string, string>> | null;
 export type InputSnapshot = { changed: boolean; commit: () => void };
 
 /** Start each session with a fresh baseline, including any pre-existing edits. */
@@ -44,14 +45,12 @@ function hashFile(path: string): string {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
-/** Builds the current input snapshot; commit it only after the check succeeds. */
-export async function snapshotInputs(check: Check, cwd: string): Promise<InputSnapshot> {
+/** Scan and hash the repository once for all checks at a lifecycle boundary. */
+export async function snapshotRepository(cwd: string): Promise<RepositorySnapshot> {
   try {
     const cache = getRepoCache(cwd);
     const listed = await git(cwd, ['ls-files', '--cached', '--others', '--exclude-standard', '-z']);
-    const paths = [...new Set(listed.split('\0').filter(Boolean))]
-      .filter((path) => !check.inputs?.length || check.inputs.some((pattern) => picomatch(pattern)(path)))
-      .sort();
+    const paths = [...new Set(listed.split('\0').filter(Boolean))].sort();
     const untracked = new Set(
       (await git(cwd, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter(Boolean),
     );
@@ -72,15 +71,31 @@ export async function snapshotInputs(check: Check, cwd: string): Promise<InputSn
       files[path] = hash;
     }
 
-    const signature = JSON.stringify(check);
-    const previousCheck = cache.checks.get(signature);
-    const changed = !previousCheck || JSON.stringify(previousCheck.files) !== JSON.stringify(files);
-    return {
-      changed,
-      commit: () => cache.checks.set(signature, { signature, files }),
-    };
+    return files;
   } catch {
-    // If Git is unavailable, prefer running the check over skipping it.
-    return { changed: true, commit: () => {} };
+    // An unavailable snapshot must never be mistaken for an empty repository.
+    return null;
   }
+}
+
+/** Filter the shared snapshot; commit a check's baseline only after it succeeds. */
+export function snapshotInputs(
+  check: Check,
+  cwd: string,
+  repository: RepositorySnapshot,
+): InputSnapshot {
+  if (repository === null) return { changed: true, commit: () => {} };
+
+  const patterns = check.inputs?.map((pattern) => picomatch(pattern));
+  const files = Object.fromEntries(
+    Object.entries(repository).filter(([path]) => !patterns?.length || patterns.some((match) => match(path))),
+  );
+  const cache = getRepoCache(cwd);
+  const signature = JSON.stringify(check);
+  const previousCheck = cache.checks.get(signature);
+  const changed = !previousCheck || JSON.stringify(previousCheck.files) !== JSON.stringify(files);
+  return {
+    changed,
+    commit: () => cache.checks.set(signature, { signature, files }),
+  };
 }
