@@ -56,7 +56,9 @@ Rules run in order. The first matching block stops the call; blocked calls recei
 - **Commands** run in the repository root. A non-zero exit code fails the check.
 - **Scripts** use repository-relative paths and default-export an async function receiving `{ cwd, event }`. Throw an error or return a non-empty string to fail. Script edits are picked up on the next run.
 
-Failures go back to the agent so it can fix them. `maxRetries` limits retries (default: `5`). `failFast` stops at the first failure (default: `true`); set it to `false` to run all checks.
+Failures go back to the agent so it can fix them. Each failure message is limited to 100 lines or 5 KiB, including its heading and truncation notice. Oversized output shows the tail and an absolute path to the full log in the system temporary directory. Command stdout and stderr are written directly to disk without an in-memory output limit; logs for successful commands are deleted, while failed-command logs remain available for inspection.
+
+`maxRetries` limits retries (default: `5`). `failFast` stops at the first failure (default: `true`); set it to `false` to run all checks.
 
 ### Skip unchanged checks
 

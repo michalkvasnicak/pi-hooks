@@ -1,38 +1,10 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { resolve } from 'node:path';
-import { createJiti } from 'jiti';
 import picomatch from 'picomatch';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig, type Check, type ToolRule } from './config.js';
 import { RepositoryRegistryService } from './services/repository-registry.js';
 
-const execFileAsync = promisify(execFile);
-
-type CheckContext = {
-  cwd: string;
-  event: { outcome: string; turnIndex?: number };
-};
-
-async function runCheck(check: Check, ctx: CheckContext): Promise<void> {
-  if (check.type === 'command') {
-    await execFileAsync(check.command, {
-      cwd: ctx.cwd,
-      shell: true,
-      maxBuffer: 10 * 1024 * 1024,
-    });
-    return;
-  }
-
-  const scriptPath = resolve(ctx.cwd, check.path);
-  const jiti = createJiti(import.meta.url, { moduleCache: false, fsCache: false });
-  const loaded = await jiti.import<{ default?: (context: CheckContext) => unknown }>(scriptPath);
-  if (typeof loaded.default !== 'function') {
-    throw new Error(`Script ${check.path} must have a default-exported function`);
-  }
-  const result = await loaded.default(ctx);
-  if (typeof result === 'string' && result.length > 0) throw new Error(result);
-}
+import { CheckRunnerService } from './services/check-runner.js';
+import { CheckFailureService } from './services/check-failure.js';
 
 function matches(rule: ToolRule, toolName: string, input: Record<string, unknown>): boolean {
   if (!picomatch.isMatch(toolName, rule.match.tool)) return false;
@@ -44,6 +16,8 @@ function matches(rule: ToolRule, toolName: string, input: Record<string, unknown
 
 export default function (pi: ExtensionAPI): void {
   const repositories = new RepositoryRegistryService();
+  const runner = new CheckRunnerService();
+  const failureMessages = new CheckFailureService();
   let checks: Check[] = [];
   let failFast = true;
   let maxRetries = 5;
@@ -99,17 +73,15 @@ export default function (pi: ExtensionAPI): void {
       const name = check.name?.trim() || String(index + 1);
       ctx.ui.setStatus('pi-hooks', `Running: ${name}`);
       try {
-        await runCheck(check, { cwd: repository.path, event: { outcome: event.outcome } });
+        await runner.run(check, { cwd: repository.path, event: { outcome: event.outcome } });
       } finally {
         ctx.ui.setStatus('pi-hooks', undefined);
       }
     }, failFast);
-    const failures = results.map(({ check, index, error }) => {
+    const failures = await Promise.all(results.map(({ check, index, error }) => {
       const name = check.name?.trim() || String(index + 1);
-      const detail = error as Error & { stdout?: string; stderr?: string };
-      const output = [detail.message, detail.stdout, detail.stderr].filter(Boolean).join('\n');
-      return `${name}: ${output}`;
-    });
+      return failureMessages.format(name, error);
+    }));
 
     if (failures.length === 0) {
       retriesUsed = 0;
