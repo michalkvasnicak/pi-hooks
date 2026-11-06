@@ -23,21 +23,19 @@ The extension reads `.pi/pi-hooks.json` first, then `.pi-hooks.json` from the cu
 ```json
 {
   "$schema": "./config.schema.json",
-  "hooks": {
-    "tool_call": {
-      "rules": [
-        { "match": { "tool": "bash", "arguments": { "command": "*rm -rf*" } }, "action": "block", "reason": "Destructive shell commands are not allowed." },
-        { "match": { "tool": "read", "arguments": { "path": "**/.env*" } }, "action": "nudge", "text": "Avoid reading secrets; use documented configuration instead." }
-      ]
-    },
-    "agent_before_settle": {
-      "failFast": true,
-      "maxRetries": 5,
-      "checks": [
-        { "name": "Lint", "type": "command", "command": "pnpm lint" },
-        { "type": "script", "path": ".pi-hooks/check.ts" }
-      ]
-    }
+  "tool_call": {
+    "rules": [
+      { "match": { "tool": "bash", "arguments": { "command": "*rm -rf*" } }, "action": "block", "reason": "Destructive shell commands are not allowed." },
+      { "match": { "tool": "read", "arguments": { "path": "**/.env*" } }, "action": "nudge", "text": "Avoid reading secrets; use documented configuration instead." }
+    ]
+  },
+  "agent_before_settle": {
+    "failFast": true,
+    "maxRetries": 5,
+    "checks": [
+      { "name": "Lint", "type": "command", "command": "pnpm lint" },
+      { "type": "script", "path": ".pi-hooks/check.ts" }
+    ]
   }
 }
 ```
